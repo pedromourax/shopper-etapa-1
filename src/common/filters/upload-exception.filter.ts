@@ -24,10 +24,10 @@ export class UploadExceptionFilter implements ExceptionFilter {
     const responseMessage =
       exception instanceof HttpException ? exception.getResponse() : exception;
 
-    const { error, statusCode, message } = responseMessage;
+    const { statusCode, message } = responseMessage;
 
     this.logger.error(
-      `Error na rota: ${request.path} \n Status: ${status} \n Message: ${JSON.stringify(message)}`,
+      `Erro na rota: ${request.path} \n Status: ${status} \n Message: ${JSON.stringify(message)}`,
     );
 
     const erros = {
@@ -38,11 +38,6 @@ export class UploadExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       error_code: erros[statusCode],
       error_description: message,
-      // timestamp: new Date().toISOString(),
-      // path: request.url,
-      // message,
-      // error,
-      // statusCode,
     });
   }
 }

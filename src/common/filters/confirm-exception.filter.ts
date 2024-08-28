@@ -8,8 +8,8 @@ import {
 } from '@nestjs/common';
 
 @Catch()
-export class AllExceptionFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionFilter.name);
+export class ConfirmExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ConfirmExceptionFilter.name);
 
   catch(exception: any, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -24,18 +24,21 @@ export class AllExceptionFilter implements ExceptionFilter {
     const responseMessage =
       exception instanceof HttpException ? exception.getResponse() : exception;
 
-    const { error, statusCode, message } = responseMessage;
+    const { statusCode, message } = responseMessage;
 
     this.logger.error(
-      `Error na rota: ${request.path} \n Status: ${status} \n Message: ${JSON.stringify(message)}`,
+      `Erro na rota: ${request.path} \n Status: ${status} \n Message: ${JSON.stringify(message)}`,
     );
 
+    const erros = {
+      400: 'INVALID_DATA',
+      404: 'MEASURE_NOT_FOUND',
+      409: 'CONFIRMATION_DUPLICATE',
+    };
+
     response.status(status).json({
-      timestamp: new Date().toISOString(),
-      path: request.url,
-      message,
-      error,
-      statusCode,
+      error_code: erros[statusCode],
+      error_description: message,
     });
   }
 }

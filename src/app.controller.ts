@@ -1,7 +1,7 @@
 import {
   Body,
   Controller,
-  Get,
+  Patch,
   Post,
   UseFilters,
   UsePipes,
@@ -10,21 +10,24 @@ import {
 import { AppService } from './app.service';
 import { UploadDto } from './dtos/upload.dto';
 import { UploadExceptionFilter } from './common/filters/upload-exception.filter';
+import { ConfirmDto } from './dtos/confirm.dto';
+import { ConfirmExceptionFilter } from './common/filters/confirm-exception.filter';
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @Get()
-  getHello() {
-    return this.appService.getHello();
-    // return this.appService.test(uploadBody);
-  }
-
-  @Post()
+  @Post('upload')
   @UseFilters(UploadExceptionFilter)
   @UsePipes(ValidationPipe)
   async Upload(@Body() uploadBody: UploadDto) {
     return this.appService.upload(uploadBody);
+  }
+
+  @Patch('confirm')
+  @UseFilters(ConfirmExceptionFilter)
+  @UsePipes(ValidationPipe)
+  async confirm(@Body() confirmBody: ConfirmDto) {
+    return this.appService.confirm(confirmBody);
   }
 }
