@@ -5,8 +5,8 @@ export class UploadDto {
   @IsNotEmpty({ message: 'image deve ser preenchido' })
   image: string;
 
-  @IsNotEmpty({ message: 'costumer_code deve ser preenchido' })
-  costumer_code: string;
+  @IsNotEmpty({ message: 'customer_code deve ser preenchido' })
+  customer_code: string;
 
   @IsNotEmpty({ message: 'measure_datetime deve ser preenchido' })
   @IsDateString(

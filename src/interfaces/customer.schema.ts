@@ -1,7 +1,7 @@
 import { Schema } from 'mongoose';
 
-export const CostumerSchema = new Schema({
-  costumer_code: String,
+export const customerSchema = new Schema({
+  customer_code: String,
   measures: [
     {
       measure_uuid: String,

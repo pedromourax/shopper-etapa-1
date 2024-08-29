@@ -8,14 +8,14 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { UploadDto } from './dtos/upload.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Costumer } from './interfaces/costumer.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { ConfirmDto } from './dtos/confirm.dto';
+import { customer } from './interfaces/customer.interface';
 
 @Injectable()
 export class AppService {
   constructor(
-    @InjectModel('Costumer') private readonly costumerModel: Model<Costumer>,
+    @InjectModel('customer') private readonly customerModel: Model<customer>,
   ) {}
 
   async upload(uploadBody: UploadDto): Promise<any> {
@@ -67,29 +67,41 @@ export class AppService {
         image_url: uploadBody.image,
       };
 
-      const costumerAlredyExists = await this.costumerModel.findOne({
-        costumer_code: uploadBody.costumer_code,
+      const customerAlredyExists = await this.customerModel.findOne({
+        customer_code: uploadBody.customer_code,
       });
-      if (!costumerAlredyExists) {
-        const newCostumer = {
-          costumer_code: uploadBody.costumer_code,
+      if (!customerAlredyExists) {
+        const newcustomer = {
+          customer_code: uploadBody.customer_code,
           measures: [measure],
         };
-        await this.costumerModel.create(newCostumer);
+        await this.customerModel.create(newcustomer);
+        return {
+          measure_value,
+          measure_uuid,
+          image_url: uploadBody.image,
+        };
       }
 
       const data = new Date(uploadBody.measure_datetime);
       data.setMonth(data.getMonth() - 1);
 
-      const valorJaConsultado = await this.costumerModel.findOne({
-        costumer_code: uploadBody.costumer_code,
-        measures: { $elemMatch: { measure_datetime: { $gt: data } } },
+      const valorJaConsultado = await this.customerModel.findOne({
+        customer_code: uploadBody.customer_code,
+        measures: {
+          $elemMatch: {
+            measure_datetime: {
+              $gt: data,
+            },
+            measure_type: uploadBody.measure_type,
+          },
+        },
       });
       if (valorJaConsultado) {
         throw new ConflictException('Mês já consultado');
       }
 
-      await costumerAlredyExists.updateOne({ $push: { measures: measure } });
+      await customerAlredyExists.updateOne({ $push: { measures: measure } });
 
       return {
         measure_value,
@@ -106,7 +118,7 @@ export class AppService {
 
   async confirm(confirmBody: ConfirmDto): Promise<any> {
     try {
-      const measure = await this.costumerModel.findOne({
+      const measure = await this.customerModel.findOne({
         measures: { $elemMatch: { measure_uuid: confirmBody.measure_uuid } },
       });
 
@@ -116,16 +128,20 @@ export class AppService {
         throw new ConflictException('Leitura já confirmada ');
       }
 
-      await this.costumerModel.findOneAndUpdate(
-        {
-          measures: { $elemMatch: { measure_uuid: confirmBody.measure_uuid } },
-        },
-        { 'measures.confirmed_value': confirmBody.confirmed_value },
-      );
-
-      // await measure.updateOne({
-      //   measures: { measure_value: confirmBody.confirmed_value },
-      // });
+      await this.customerModel
+        .findOneAndUpdate(
+          { 'measures.measure_uuid': confirmBody.measure_uuid },
+          {
+            $set: {
+              'measures.$[elem].measure_value': `${confirmBody.confirmed_value}`,
+              'measures.$[elem].has_confirmed': true,
+            },
+          },
+          {
+            arrayFilters: [{ 'elem.measure_uuid': confirmBody.measure_uuid }],
+          },
+        )
+        .exec();
 
       return {
         success: true,
@@ -137,6 +153,89 @@ export class AppService {
         throw new NotFoundException(error.message);
       else if (error instanceof ConflictException)
         throw new ConflictException(error.message);
+    }
+  }
+
+  async listQuery(customer_code, measure_type) {
+    try {
+      if (measure_type !== 'WATER' && measure_type !== 'GAS')
+        throw new BadRequestException('Tipo de medição não permitida');
+
+      console.log('measure type', measure_type);
+      // const customer = await this.customerModel
+      //   .findOne({
+      //     customer_code,
+      //     measures: {
+      //       $elemMatch: {
+      //         measure_uuid: '3bafaaa8-a09d-47e8-9eed-e096e00d3046',
+      //       },
+      //     },
+      //   })
+      //   .select([
+      //     '-_id',
+      //     'customer_code',
+      //     'measures.measure_uuid',
+      //     'measures.measure_datetime',
+      //     'measures.measure_type',
+      //     'measures.has_confirmed',
+      //     'measures.image_url',
+      //   ])
+      //   .exec();
+
+      const customer = await this.customerModel
+        .aggregate([
+          {
+            $match: {
+              customer_code: customer_code, // Filtra o customer específico pelo ID
+            },
+          },
+          {
+            $project: {
+              measures: {
+                $filter: {
+                  input: '$measures',
+                  as: 'measure',
+                  cond: { $eq: ['$$measure.measure_type', measure_type] }, // Filtra pela measure_uuid específica
+                },
+              },
+            },
+          },
+        ])
+        .exec();
+
+      if (!customer) throw new NotFoundException('Nenhuma leitura encontrada');
+
+      return customer;
+    } catch (error) {
+      if (error instanceof BadRequestException)
+        throw new BadRequestException(error.message);
+      else if (error instanceof NotFoundException)
+        throw new NotFoundException(error.message);
+    }
+  }
+
+  async list(customer_code) {
+    try {
+      const customer = await this.customerModel
+        .findOne({ customer_code })
+        .select([
+          '-_id',
+          'customer_code',
+          'measures.measure_uuid',
+          'measures.measure_datetime',
+          'measures.measure_type',
+          'measures.has_confirmed',
+          'measures.image_url',
+        ]);
+
+      if (!customer) throw new NotFoundException('Nenhuma leitura encontrada');
+
+      return customer;
+    } catch (error) {
+      if (error instanceof BadRequestException)
+        throw new BadRequestException(error.message);
+      else if (error instanceof NotFoundException)
+        throw new NotFoundException(error.message);
     }
   }
 }
