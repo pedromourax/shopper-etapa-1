@@ -17,7 +17,7 @@ export class UploadDto {
 
   @IsNotEmpty({ message: 'measure_type deve ser preenchido' })
   @IsIn(['WATER', 'GAS'], {
-    message: 'measure_type must be equal to WATER or GAS',
+    message: 'measure_type deve ser igual a WATER ou GAS',
   })
   measure_type: 'WATER' | 'GAS';
 }

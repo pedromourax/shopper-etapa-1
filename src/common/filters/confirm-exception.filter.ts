@@ -36,9 +36,11 @@ export class ConfirmExceptionFilter implements ExceptionFilter {
       409: 'CONFIRMATION_DUPLICATE',
     };
 
+    const msg = Array.isArray(message) ? message.join(', ') : message;
+
     response.status(status).json({
       error_code: erros[statusCode],
-      error_description: message,
+      error_description: msg,
     });
   }
 }

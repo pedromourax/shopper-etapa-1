@@ -1,18 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
-import { enviroment } from './enviroment';
-import { customerSchema } from './interfaces/customer.schema';
+import { CustomerModule } from './customer/customer.module';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRoot(enviroment.mongodb_uri),
-    MongooseModule.forFeature([{ name: 'customer', schema: customerSchema }]),
-  ],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), CustomerModule],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

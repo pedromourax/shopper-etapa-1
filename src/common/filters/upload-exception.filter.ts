@@ -35,9 +35,11 @@ export class UploadExceptionFilter implements ExceptionFilter {
       409: 'DOUBLE_REPORT',
     };
 
+    const msg = Array.isArray(message) ? message.join(', ') : message;
+
     response.status(status).json({
       error_code: erros[statusCode],
-      error_description: message,
+      error_description: msg,
     });
   }
 }

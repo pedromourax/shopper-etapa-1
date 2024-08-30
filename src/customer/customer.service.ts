@@ -1,19 +1,19 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { UploadDto } from './dtos/upload.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
-import { ConfirmDto } from './dtos/confirm.dto';
 import { customer } from './interfaces/customer.interface';
+import { UploadDto } from './dtos/upload.dto';
+import { ConfirmDto } from './dtos/confirm.dto';
 
 @Injectable()
-export class AppService {
+export class CustomerService {
   constructor(
     @InjectModel('customer') private readonly customerModel: Model<customer>,
   ) {}
@@ -118,14 +118,47 @@ export class AppService {
 
   async confirm(confirmBody: ConfirmDto): Promise<any> {
     try {
-      const measure = await this.customerModel.findOne({
-        measures: { $elemMatch: { measure_uuid: confirmBody.measure_uuid } },
-      });
+      const measure = await this.customerModel.aggregate([
+        {
+          $match: {
+            'measures.measure_uuid': confirmBody.measure_uuid,
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            value: {
+              $arrayElemAt: [
+                {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: '$measures',
+                        as: 'measure',
+                        cond: {
+                          $eq: [
+                            '$$measure.measure_uuid',
+                            confirmBody.measure_uuid,
+                          ],
+                        },
+                      },
+                    },
+                    as: 'filteredMeasure',
+                    in: '$$filteredMeasure.has_confirmed',
+                  },
+                },
+                0,
+              ],
+            },
+          },
+        },
+      ]);
+      console.log(measure);
+      if (measure.length == 0)
+        throw new NotFoundException('Leitura não encontrada');
 
-      if (!measure) throw new NotFoundException('Leitura não encontrada');
-
-      if (measure.measures[0].has_confirmed) {
-        throw new ConflictException('Leitura já confirmada ');
+      if (measure[0].value) {
+        throw new ConflictException('Leitura já confirmada');
       }
 
       await this.customerModel
@@ -160,52 +193,44 @@ export class AppService {
     try {
       if (measure_type !== 'WATER' && measure_type !== 'GAS')
         throw new BadRequestException('Tipo de medição não permitida');
-
-      console.log('measure type', measure_type);
-      // const customer = await this.customerModel
-      //   .findOne({
-      //     customer_code,
-      //     measures: {
-      //       $elemMatch: {
-      //         measure_uuid: '3bafaaa8-a09d-47e8-9eed-e096e00d3046',
-      //       },
-      //     },
-      //   })
-      //   .select([
-      //     '-_id',
-      //     'customer_code',
-      //     'measures.measure_uuid',
-      //     'measures.measure_datetime',
-      //     'measures.measure_type',
-      //     'measures.has_confirmed',
-      //     'measures.image_url',
-      //   ])
-      //   .exec();
-
-      const customer = await this.customerModel
-        .aggregate([
-          {
-            $match: {
-              customer_code: customer_code, // Filtra o customer específico pelo ID
-            },
+      console.log('ASDASDASDASDA');
+      const customer = await this.customerModel.aggregate([
+        {
+          $match: {
+            customer_code: customer_code,
           },
-          {
-            $project: {
-              measures: {
-                $filter: {
-                  input: '$measures',
-                  as: 'measure',
-                  cond: { $eq: ['$$measure.measure_type', measure_type] }, // Filtra pela measure_uuid específica
+        },
+        {
+          $project: {
+            _id: 0,
+            measures: {
+              $map: {
+                input: {
+                  $filter: {
+                    input: '$measures',
+                    as: 'measure',
+                    cond: {
+                      $eq: ['$$measure.measure_type', measure_type],
+                    },
+                  },
+                },
+                as: 'filteredMeasure',
+                in: {
+                  measure_uuid: '$$filteredMeasure.measure_uuid',
+                  measure_datetime: '$$filteredMeasure.measure_datetime',
+                  measure_type: '$$filteredMeasure.measure_type',
+                  has_confirmed: '$$filteredMeasure.has_confirmed',
+                  image_url: '$$filteredMeasure.image_url',
                 },
               },
             },
           },
-        ])
-        .exec();
+        },
+      ]);
+      if (customer.length == 0)
+        throw new NotFoundException('Nenhuma leitura encontrada');
 
-      if (!customer) throw new NotFoundException('Nenhuma leitura encontrada');
-
-      return customer;
+      return customer[0];
     } catch (error) {
       if (error instanceof BadRequestException)
         throw new BadRequestException(error.message);

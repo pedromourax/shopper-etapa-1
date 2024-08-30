@@ -35,9 +35,11 @@ export class ListExceptionFilter implements ExceptionFilter {
       404: 'MEASURES_NOT_FOUND',
     };
 
+    const msg = Array.isArray(message) ? message.join(', ') : message;
+
     response.status(status).json({
       error_code: erros[statusCode],
-      error_description: message,
+      error_description: msg,
     });
   }
 }
