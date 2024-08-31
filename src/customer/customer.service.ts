@@ -37,18 +37,15 @@ export class CustomerService {
           },
         ])
         .then((res) => {
-          console.log(res.response);
           return res.response.text();
         })
         .catch((e) => {
-          console.log(e.message);
           throw new BadRequestException(
             'Os dados fornecidos no corpo da requisição são inválidos',
           );
         });
 
       const test = result.match(/\d/g).join('');
-      console.log(result, test);
       const measure_value = parseInt(test.trim());
       if (Number.isNaN(test)) {
         throw new BadRequestException(
@@ -153,7 +150,6 @@ export class CustomerService {
           },
         },
       ]);
-      console.log(measure);
       if (measure.length == 0)
         throw new NotFoundException('Leitura não encontrada');
 
@@ -193,7 +189,6 @@ export class CustomerService {
     try {
       if (measure_type !== 'WATER' && measure_type !== 'GAS')
         throw new BadRequestException('Tipo de medição não permitida');
-      console.log('ASDASDASDASDA');
       const customer = await this.customerModel.aggregate([
         {
           $match: {

@@ -41,13 +41,9 @@ export class CustomerController {
     @Param('customer_code') customer_code: string,
     @Query() query: { measure_type: string },
   ) {
-    console.log(query);
     if (Object.keys(query).length === 0) {
-      console.log('list');
       return this.customerService.list(customer_code);
     }
-    console.log('listQuery');
-
     return this.customerService.listQuery(customer_code, query.measure_type);
   }
 }
