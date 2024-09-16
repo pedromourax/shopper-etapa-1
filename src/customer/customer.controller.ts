@@ -46,4 +46,10 @@ export class CustomerController {
     }
     return this.customerService.listQuery(customer_code, query.measure_type);
   }
+
+  @Get(':customer_code/list2')
+  @UseFilters(ListExceptionFilter)
+  async list2(@Param('customer_code') customer_code: string) {
+    return this.customerService.list2(customer_code);
+  }
 }

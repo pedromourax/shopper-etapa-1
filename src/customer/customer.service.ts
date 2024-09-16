@@ -258,4 +258,21 @@ export class CustomerService {
         throw new NotFoundException(error.message);
     }
   }
+
+  async list2(customer_code) {
+    try {
+      const customer = await this.customerModel
+        .findOne({ customer_code })
+        .select(['-_id', '-__v']);
+
+      if (!customer) throw new NotFoundException('Nenhuma leitura encontrada');
+
+      return customer;
+    } catch (error) {
+      if (error instanceof BadRequestException)
+        throw new BadRequestException(error.message);
+      else if (error instanceof NotFoundException)
+        throw new NotFoundException(error.message);
+    }
+  }
 }
